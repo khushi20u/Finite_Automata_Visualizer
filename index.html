@@ -1,0 +1,2418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Finite Automata Visualizer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Sunset palette from image */
+  --c-crimson:  #8A191F;
+  --c-red:      #FD4219;
+  --c-orange:   #FD7E05;
+  --c-amber:    #FCA201;
+  --c-lilac:    #C77CBF;
+  --c-purple:   #8B276F;
+  --c-magenta:  #B72065;
+  --c-wine:     #94215A;
+
+  --bg:         #0d000a;   /* Very very dark magenta */
+  --surface:    #130008;
+  --surface2:   #1c000f;
+  --border:     #3a0f25;
+  --border2:    #5a1535;
+  --accent:     #FD4219;   /* red */
+  --accent2:    #FD7E05;   /* orange */
+  --accent3:    #FCA201;   /* amber */
+  --accent4:    #C77CBF;   /* lilac */
+  --accent5:    #8B276F;   /* purple */
+  --gold:       #FCA201;
+  --text:       #ffffff;
+  --text2:      #f5c0d0;
+  --text3:      #8B276F;
+  --start-color: #FD7E05;
+  --accept-color: #FCA201;
+  --current-color: #FD4219;
+  --normal-color: #8B276F;
+  --glow-red:    0 0 20px rgba(253,66,25,0.5);
+  --glow-orange: 0 0 20px rgba(253,126,5,0.4);
+  --glow-amber:  0 0 20px rgba(252,162,1,0.4);
+  --glow-purple: 0 0 20px rgba(139,39,111,0.5);
+  --glow-magenta:0 0 20px rgba(183,32,101,0.45);
+  --radius: 12px;
+  --font-body: 'Outfit', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(139,39,111,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139,39,111,0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  top: -200px; left: -200px;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(139,39,111,0.12) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient-2 {
+  position: fixed;
+  bottom: -200px; right: -200px;
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(183,32,101,0.1) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* =========== HEADER =========== */
+header {
+  position: relative;
+  z-index: 10;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  background: rgba(13,0,10,0.92);
+}
+
+.logo-text h1 {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ffffff 0%, var(--c-orange) 60%, var(--c-amber) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-text p {
+  font-size: 11px;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+  margin-top: 1px;
+}
+
+.header-badge {
+  margin-left: auto;
+  display: flex; gap: 8px; align-items: center;
+}
+
+/* Tab navigation for main sections */
+.nav-tabs {
+  display: flex; gap: 4px;
+  background: rgba(19,0,8,0.8);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 4px;
+  margin-right: 12px;
+}
+
+.nav-tab {
+  padding: 5px 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  transition: all 0.2s;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+.nav-tab:hover { color: #fff; background: rgba(253,66,25,0.12); }
+.nav-tab.active { background: linear-gradient(135deg, var(--c-red), var(--c-magenta)); color: #fff; box-shadow: var(--glow-magenta); }
+
+.badge {
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.badge-dfa {
+  background: rgba(253,126,5,0.15);
+  color: var(--c-orange);
+  border: 1px solid rgba(253,126,5,0.35);
+}
+.badge-nfa {
+  background: rgba(139,39,111,0.2);
+  color: var(--text2);
+  border: 1px solid rgba(139,39,111,0.4);
+}
+.badge.active-mode {
+  transform: scale(1.05);
+}
+.badge-dfa.active-mode {
+  background: rgba(253,126,5,0.3);
+  box-shadow: var(--glow-orange);
+}
+.badge-nfa.active-mode {
+  background: rgba(139,39,111,0.35);
+  box-shadow: var(--glow-purple);
+}
+
+/* =========== PAGE VIEWS =========== */
+.page { display: none; }
+.page.active { display: flex; flex-direction: column; }
+
+/* =========== MAIN LAYOUT =========== */
+.main {
+  position: relative; z-index: 5;
+  display: grid;
+  grid-template-columns: 300px 1fr 290px;
+  height: calc(100vh - 73px);
+  gap: 0;
+}
+
+.panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 18px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+
+.panel-right {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 18px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+
+.panel-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.panel-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.section { margin-bottom: 22px; }
+
+/* =========== FORM =========== */
+label {
+  display: block;
+  font-size: 12px;
+  color: var(--text2);
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+input[type="text"], select, textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px 11px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  margin-bottom: 9px;
+}
+
+input[type="text"]:focus, select:focus, textarea:focus {
+  border-color: var(--c-red);
+  box-shadow: 0 0 0 3px rgba(253,66,25,0.18);
+}
+
+select option { background: var(--surface); color: var(--text); }
+
+/* =========== BUTTONS =========== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  font-family: var(--font-body);
+  letter-spacing: 0.2px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--c-red), var(--c-magenta));
+  color: #fff;
+  width: 100%;
+}
+.btn-primary:hover { filter: brightness(1.18); transform: translateY(-1px); box-shadow: var(--glow-magenta); }
+
+.btn-secondary {
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border2);
+  width: 100%;
+}
+.btn-secondary:hover { background: var(--border2); color: var(--text); }
+
+.btn-danger {
+  background: rgba(253,66,25,0.1);
+  color: #ff8070;
+  border: 1px solid rgba(253,66,25,0.25);
+  width: 100%;
+}
+.btn-danger:hover { background: rgba(253,66,25,0.2); }
+
+.btn-success {
+  background: linear-gradient(135deg, var(--c-purple), var(--c-wine));
+  color: #fff;
+  width: 100%;
+}
+.btn-success:hover { filter: brightness(1.18); transform: translateY(-1px); box-shadow: var(--glow-purple); }
+
+.btn-amber {
+  background: linear-gradient(135deg, var(--c-orange), var(--c-amber));
+  color: #1a0000;
+  width: 100%;
+}
+.btn-amber:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: var(--glow-amber); }
+
+.btn-sm {
+  padding: 6px 11px;
+  font-size: 12px;
+  width: auto;
+}
+
+.btn-row { display: flex; gap: 8px; }
+
+/* =========== STATE LIST =========== */
+.state-list { display: flex; flex-direction: column; gap: 5px; }
+
+.state-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 11px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.state-item:hover { border-color: var(--border2); background: var(--surface2); }
+
+.state-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--normal-color);
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.state-item.is-start .state-dot { background: var(--start-color); box-shadow: 0 0 6px var(--start-color); }
+.state-item.is-accept .state-dot { background: var(--accept-color); box-shadow: 0 0 6px var(--accept-color); }
+.state-item.is-start.is-accept .state-dot {
+  background: linear-gradient(135deg, var(--start-color), var(--accept-color));
+  box-shadow: 0 0 8px rgba(252,162,1,0.5);
+}
+
+.state-label { flex: 1; color: #fff; }
+.state-badges { display: flex; gap: 3px; }
+
+.s-badge {
+  font-size: 8px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.s-badge-start { background: rgba(253,126,5,0.18); color: var(--start-color); }
+.s-badge-accept { background: rgba(252,162,1,0.15); color: var(--gold); }
+
+.state-actions { display: flex; gap: 3px; }
+
+.state-del, .state-edit {
+  opacity: 0.35; cursor: pointer;
+  font-size: 13px; transition: opacity 0.2s;
+  background: none; border: none;
+  padding: 2px 4px; border-radius: 4px;
+}
+.state-del { color: #ff6060; }
+.state-del:hover { opacity: 1; background: rgba(255,96,96,0.12); }
+.state-edit { color: var(--text2); }
+.state-edit:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+
+/* =========== TRANSITIONS =========== */
+.trans-list { display: flex; flex-direction: column; gap: 4px; }
+
+.trans-item {
+  display: flex; align-items: center; gap: 5px;
+  padding: 7px 9px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  transition: all 0.2s;
+}
+
+.trans-item.active-trans {
+  border-color: var(--current-color);
+  background: rgba(253,66,25,0.07);
+  box-shadow: 0 0 12px rgba(253,66,25,0.18);
+}
+
+.trans-arrow { color: var(--text3); }
+.trans-sym {
+  background: rgba(139,39,111,0.25);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--accent4);
+  font-weight: 700;
+}
+.trans-sym.epsilon-sym {
+  background: rgba(252,162,1,0.15);
+  color: var(--c-amber);
+}
+
+/* =========== CANVAS =========== */
+.canvas-area {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+#fa-canvas {
+  width: 100%; height: 100%;
+  cursor: crosshair;
+  display: block;
+}
+
+.canvas-toolbar {
+  position: absolute;
+  top: 14px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 6px;
+  background: rgba(13,0,10,0.9);
+  border: 1px solid var(--border2);
+  border-radius: 100px;
+  padding: 5px 10px;
+  z-index: 20;
+  backdrop-filter: blur(10px);
+}
+
+.tool-btn {
+  padding: 5px 13px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  transition: all 0.2s;
+  font-family: var(--font-body);
+}
+.tool-btn:hover { color: var(--text); background: var(--surface2); }
+.tool-btn.active { background: linear-gradient(135deg, var(--c-red), var(--c-magenta)); color: #fff; box-shadow: var(--glow-magenta); }
+
+.canvas-hint {
+  position: absolute;
+  bottom: 14px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  background: rgba(13,0,10,0.85);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 4px 14px;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+/* =========== SIMULATION =========== */
+.tape-display {
+  display: flex; align-items: center;
+  gap: 2px;
+  padding: 9px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  min-height: 44px;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+.tape-cell {
+  width: 30px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text2);
+  background: var(--surface);
+  transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.tape-cell.current {
+  border-color: var(--current-color);
+  background: rgba(253,66,25,0.18);
+  color: #fff;
+  transform: scale(1.18);
+  box-shadow: var(--glow-red);
+  z-index: 2;
+}
+
+.tape-cell.done {
+  border-color: var(--text3);
+  color: var(--text3);
+  background: var(--bg);
+}
+
+.sim-status {
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  transition: all 0.4s;
+  min-height: 40px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.sim-status.idle { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); }
+.sim-status.running { background: rgba(253,126,5,0.12); color: var(--c-orange); border: 1px solid rgba(253,126,5,0.35); animation: pulse 1s ease infinite; }
+.sim-status.accepted { background: rgba(252,162,1,0.12); color: var(--c-amber); border: 1px solid rgba(252,162,1,0.4); }
+.sim-status.rejected { background: rgba(253,66,25,0.1); color: var(--c-red); border: 1px solid rgba(253,66,25,0.3); }
+
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.sim-input-row { display: flex; gap: 7px; align-items: center; }
+.sim-input-row input { flex: 1; margin-bottom: 0; }
+
+.sim-btn-row { display: flex; gap: 6px; }
+.sim-btn-row .btn { flex: 1; font-size: 12px; padding: 7px 8px; }
+
+.speed-row {
+  display: flex; gap: 8px; align-items: center;
+  font-size: 14px;
+}
+.speed-row input[type="range"] {
+  flex: 1; margin-bottom: 0; padding: 0;
+  accent-color: var(--c-red);
+}
+
+.step-info {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  min-height: 48px;
+  color: var(--text2);
+}
+
+/* =========== NFA ACTIVE STATES =========== */
+.nfa-active-display { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.nfa-state-pill {
+  padding: 3px 9px;
+  border-radius: 100px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: rgba(139,39,111,0.22);
+  color: var(--accent4);
+  border: 1px solid rgba(139,39,111,0.4);
+}
+
+/* =========== LOG =========== */
+.log-area {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px;
+  height: 130px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+
+.log-entry { color: var(--text3); padding: 2px 0; line-height: 1.5; }
+.log-entry.log-step { color: var(--text2); }
+.log-entry.log-success { color: var(--c-amber); }
+.log-entry.log-fail { color: var(--c-red); }
+.log-entry.log-warn { color: var(--c-orange); }
+
+/* =========== ALPHABET =========== */
+.alphabet-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+.alph-badge {
+  padding: 3px 10px;
+  background: rgba(139,39,111,0.2);
+  border: 1px solid rgba(139,39,111,0.4);
+  border-radius: 100px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent4);
+  font-weight: 700;
+}
+.alph-badge.epsilon { background: rgba(252,162,1,0.12); border-color: rgba(252,162,1,0.3); color: var(--c-amber); }
+
+/* =========== TRANS TABLE =========== */
+.trans-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.trans-table th {
+  background: var(--surface2);
+  color: var(--text2);
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  text-align: center;
+  font-weight: 600;
+}
+.trans-table td {
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  text-align: center;
+  color: var(--text);
+  transition: background 0.2s;
+}
+.trans-table tr.active-row td {
+  background: rgba(253,66,25,0.07);
+  color: var(--c-orange);
+}
+.trans-table td:first-child { color: var(--c-orange); font-weight: 600; }
+.trans-table td.trans-val { color: var(--c-amber); }
+
+/* =========== LEGEND =========== */
+.legend { display: flex; flex-direction: column; gap: 7px; }
+.legend-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text2);
+}
+.legend-swatch {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+}
+
+/* =========== CONTEXT MENU =========== */
+.ctx-menu {
+  position: fixed;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 6px;
+  z-index: 100;
+  min-width: 165px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  display: none;
+}
+.ctx-menu.visible { display: block; }
+.ctx-item {
+  padding: 8px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+  color: var(--text2);
+  display: flex; align-items: center; gap: 8px;
+}
+.ctx-item:hover { background: var(--surface); color: #fff; }
+.ctx-item.danger { color: #ff6060; }
+.ctx-item.danger:hover { background: rgba(255,96,96,0.1); }
+.ctx-item .ci { font-size: 14px; }
+.sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* =========== PRESETS =========== */
+.preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.preset-btn {
+  padding: 7px 9px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text2);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  font-family: var(--font-body);
+}
+.preset-btn:hover { border-color: var(--c-red); color: #fff; background: rgba(253,66,25,0.1); }
+.preset-btn.nfa-preset { border-color: rgba(139,39,111,0.4); }
+.preset-btn.nfa-preset:hover { border-color: var(--c-purple); background: rgba(139,39,111,0.14); }
+
+/* =========== SCROLLBAR =========== */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* =========== EPSILON BADGE =========== */
+.epsilon-btn {
+  padding: 4px 10px;
+  background: rgba(252,162,1,0.12);
+  border: 1px solid rgba(252,162,1,0.3);
+  border-radius: 6px;
+  color: var(--c-amber);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 700;
+}
+.epsilon-btn:hover { background: rgba(252,162,1,0.22); }
+
+/* =========== LEARN PAGE =========== */
+.learn-page {
+  position: relative; z-index: 5;
+  overflow-y: auto;
+  height: calc(100vh - 73px);
+  padding: 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.learn-hero {
+  text-align: center;
+  padding: 40px 20px 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 36px;
+}
+
+.learn-hero h2 {
+  font-size: 36px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff 0%, var(--c-orange) 50%, var(--c-amber) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
+}
+
+.learn-hero p {
+  font-size: 16px;
+  color: var(--text2);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+.learn-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.learn-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.learn-card:hover { border-color: var(--border2); box-shadow: 0 4px 24px rgba(0,0,0,0.3); }
+
+.learn-card.full { grid-column: 1 / -1; }
+.learn-card.highlight-red { border-color: rgba(253,66,25,0.3); }
+.learn-card.highlight-orange { border-color: rgba(253,126,5,0.3); }
+.learn-card.highlight-amber { border-color: rgba(252,162,1,0.3); }
+.learn-card.highlight-purple { border-color: rgba(139,39,111,0.4); }
+
+.card-icon {
+  font-size: 28px;
+  margin-bottom: 12px;
+}
+
+.learn-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.learn-card p {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.7;
+  margin-bottom: 10px;
+}
+
+.learn-card ul {
+  list-style: none;
+  padding: 0;
+}
+
+.learn-card ul li {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.7;
+  padding: 3px 0;
+  padding-left: 16px;
+  position: relative;
+}
+.learn-card ul li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--c-red);
+  font-size: 12px;
+}
+
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  margin-bottom: 10px;
+}
+.tag-dfa { background: rgba(253,126,5,0.15); color: var(--c-orange); border: 1px solid rgba(253,126,5,0.3); }
+.tag-nfa { background: rgba(139,39,111,0.2); color: var(--accent4); border: 1px solid rgba(139,39,111,0.4); }
+.tag-both { background: rgba(252,162,1,0.12); color: var(--c-amber); border: 1px solid rgba(252,162,1,0.25); }
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 10px;
+}
+.comparison-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border2);
+  color: #fff;
+}
+.comparison-table th:nth-child(2) { color: var(--c-orange); }
+.comparison-table th:nth-child(3) { color: var(--accent4); }
+.comparison-table td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  line-height: 1.5;
+  vertical-align: top;
+}
+.comparison-table tr:last-child td { border-bottom: none; }
+.comparison-table td:first-child { color: var(--text3); font-family: var(--font-mono); font-size: 12px; }
+
+.step-list { counter-reset: step; }
+.step-item {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.step-item:last-child { border-bottom: none; }
+.step-num-bubble {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--c-red), var(--c-magenta));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+}
+.step-item-content h4 { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+.step-item-content p { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+.formula-box {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 9px;
+  padding: 14px 18px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--c-amber);
+  margin: 10px 0;
+  line-height: 1.9;
+}
+
+.learn-section-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin: 28px 0 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border2);
+  display: flex; align-items: center; gap: 10px;
+}
+.learn-section-title span { font-size: 20px; }
+
+.interactive-hint {
+  background: rgba(253,66,25,0.07);
+  border: 1px solid rgba(253,66,25,0.25);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin: 20px 0;
+  display: flex; gap: 14px; align-items: flex-start;
+}
+.interactive-hint .hint-icon { font-size: 24px; flex-shrink: 0; }
+.interactive-hint h4 { color: #fff; font-size: 14px; margin-bottom: 5px; }
+.interactive-hint p { color: var(--text2); font-size: 13px; line-height: 1.6; }
+.interactive-hint .go-btn {
+  margin-top: 10px;
+  padding: 6px 16px;
+  background: linear-gradient(135deg, var(--c-red), var(--c-magenta));
+  border: none;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.interactive-hint .go-btn:hover { filter: brightness(1.15); }
+
+/* Epsilon explanation box */
+.epsilon-explain {
+  background: rgba(252,162,1,0.05);
+  border: 1px solid rgba(252,162,1,0.25);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-top: 12px;
+}
+.epsilon-explain h4 { color: var(--c-amber); font-size: 14px; margin-bottom: 8px; font-family: var(--font-mono); }
+.epsilon-explain p { color: var(--text2); font-size: 13px; line-height: 1.65; }
+
+</style>
+</head>
+<body>
+<div class="ambient-2"></div>
+
+<header>
+  <div class="logo-text">
+    <h1>Finite Automata Visualizer</h1>
+    <p>Interactive Simulator</p>
+  </div>
+  <div class="header-badge">
+    <nav class="nav-tabs">
+      <button class="nav-tab active" id="nav-builder" onclick="showPage('builder')">🔧 Builder</button>
+      <button class="nav-tab" id="nav-learn" onclick="showPage('learn')">📚 Learn</button>
+    </nav>
+    <span class="badge badge-dfa active-mode" id="mode-dfa" onclick="setMode('DFA')">DFA</span>
+    <span class="badge badge-nfa" id="mode-nfa" onclick="setMode('NFA')">NFA</span>
+  </div>
+</header>
+
+<!-- ==================== BUILDER PAGE ==================== -->
+<div class="page active" id="page-builder">
+<div class="main">
+
+  <!-- LEFT PANEL -->
+  <div class="panel">
+
+    <div class="section">
+      <div class="panel-title">⬡ States</div>
+      <label>State name</label>
+      <input type="text" id="state-name-input" placeholder="q0, q1, q2 ..." maxlength="8" onkeydown="if(event.key==='Enter') addState()"/>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" onclick="addState()">+ Add State</button>
+        <button class="btn btn-secondary btn-sm" onclick="clearAll()">Clear All</button>
+      </div>
+      <div style="height:10px"></div>
+      <div class="state-list" id="state-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="panel-title">→ Transitions</div>
+      <label>From state</label>
+      <select id="trans-from"></select>
+      <label>Symbol</label>
+      <div style="display:flex;gap:6px;margin-bottom:9px;">
+        <input type="text" id="trans-sym" placeholder="0, 1, a, b ..." maxlength="4" style="margin-bottom:0;flex:1"/>
+        <button class="epsilon-btn" onclick="insertEpsilon()" title="Insert epsilon (ε)">ε</button>
+      </div>
+      <label>To state</label>
+      <select id="trans-to"></select>
+      <button class="btn btn-primary btn-sm" onclick="addTransition()" style="width:100%;margin-top:2px">+ Add Transition</button>
+      <div style="height:10px"></div>
+      <div class="trans-list" id="trans-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="panel-title">⊞ Presets</div>
+      <div class="preset-grid">
+        <button class="preset-btn" onclick="loadPreset('even0s')">Even 0s (DFA)</button>
+        <button class="preset-btn" onclick="loadPreset('endsWith1')">Ends with 1 (DFA)</button>
+        <button class="preset-btn" onclick="loadPreset('contains01')">Contains 01 (DFA)</button>
+        <button class="preset-btn nfa-preset" onclick="loadPreset('nfa01')">Ends with 01 (NFA)</button>
+        <button class="preset-btn nfa-preset" style="grid-column:1/-1" onclick="loadPreset('nfaEpsilon')">ε-NFA: (a|ab)*b</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CENTER CANVAS -->
+  <div class="canvas-area">
+    <div class="canvas-toolbar">
+      <button class="tool-btn active" id="tool-select" onclick="setTool('select')">↖ Select</button>
+      <button class="tool-btn" id="tool-move" onclick="setTool('move')">✥ Move</button>
+      <button class="tool-btn" id="tool-connect" onclick="setTool('connect')">→ Connect</button>
+    </div>
+    <canvas id="fa-canvas"></canvas>
+    <div class="canvas-hint" id="canvas-hint">Double-click canvas to add state · Right-click state for options</div>
+    <div class="ctx-menu" id="ctx-menu">
+      <div class="ctx-item" id="ctx-start" onclick="ctxSetStart()"><span class="ci">▶</span> Set as Start</div>
+      <div class="ctx-item" id="ctx-accept" onclick="ctxToggleAccept()"><span class="ci">◎</span> Toggle Accept</div>
+      <div class="sep"></div>
+      <div class="ctx-item" id="ctx-rename" onclick="ctxRename()"><span class="ci">✎</span> Rename</div>
+      <div class="ctx-item danger" onclick="ctxDelete()"><span class="ci">✕</span> Delete State</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel-right">
+
+    <div class="section">
+      <div class="panel-title">▶ Simulation</div>
+      <label>Input string</label>
+      <div class="sim-input-row">
+        <input type="text" id="sim-input" placeholder="01010..." style="margin-bottom:0" onkeydown="if(event.key==='Enter') startSim()"/>
+      </div>
+      <div style="height:8px"></div>
+      <div class="tape-display" id="tape-display">
+        <span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Enter a string to simulate...</span>
+      </div>
+      <div style="height:8px"></div>
+      <div class="sim-status idle" id="sim-status">READY</div>
+      <div style="height:8px"></div>
+
+      <div id="nfa-active-area" style="display:none">
+        <label>Active NFA states:</label>
+        <div class="nfa-active-display" id="nfa-active-display"></div>
+      </div>
+
+      <div class="sim-btn-row">
+        <button class="btn btn-success btn-sm" onclick="startSim()">▶ Run</button>
+        <button class="btn btn-secondary btn-sm" onclick="stepSim()">→ Step</button>
+        <button class="btn btn-danger btn-sm" onclick="resetSim()">↺ Reset</button>
+      </div>
+
+      <div style="height:10px"></div>
+      <div class="speed-row">
+        <span>slow</span>
+        <input type="range" id="speed-slider" min="200" max="2000" value="800" step="100"/>
+        <span>fast</span>
+      </div>
+      <div style="height:10px"></div>
+
+      <div class="step-info" id="step-info">
+        <span style="color:var(--text3);font-size:11px;font-family:var(--font-mono)">Simulation log will appear here...</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="panel-title">◉ Legend</div>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(139,39,111,0.2);border-color:var(--normal-color)"></div>
+          Normal state
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(253,126,5,0.15);border-color:var(--start-color)"></div>
+          Start state (→)
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(252,162,1,0.12);border-color:var(--gold);border-width:3px;border-style:double"></div>
+          Accept state (◎)
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(253,66,25,0.2);border-color:var(--current-color)"></div>
+          Current state
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:rgba(252,162,1,0.08);border:1px dashed var(--c-amber)"></div>
+          ε-transition (free move)
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="panel-title">∑ Alphabet</div>
+      <div class="alphabet-badges" id="alphabet-display">
+        <span style="color:var(--text3);font-size:11px;font-family:var(--font-mono)">No symbols defined</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="panel-title">⊞ Transition Table</div>
+      <div id="trans-table-area" style="overflow-x:auto">
+        <span style="color:var(--text3);font-size:11px;font-family:var(--font-mono)">Add transitions to see table</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="panel-title">✎ Simulation Log</div>
+      <div class="log-area" id="log-area">
+        <div class="log-entry">System initialized. Ready.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- ==================== LEARN PAGE ==================== -->
+<div class="page" id="page-learn">
+<div class="learn-page">
+
+  <div class="learn-hero">
+    <h2>Understanding Finite Automata</h2>
+    <p>A complete guide to DFA, NFA, and epsilon transitions — from first principles to hands-on examples.</p>
+  </div>
+
+  <div class="interactive-hint">
+    <div class="hint-icon">🔧</div>
+    <div>
+      <h4>Learn by Doing</h4>
+      <p>The best way to understand automata is to build and simulate them interactively. Switch to the Builder tab and experiment with the preset examples — or design your own from scratch.</p>
+      <button class="go-btn" onclick="showPage('builder')">Open Builder →</button>
+    </div>
+  </div>
+
+  <div class="learn-section-title"><span>📖</span> What is a Finite Automaton?</div>
+
+  <div class="learn-grid">
+    <div class="learn-card highlight-red">
+      <div class="card-icon">🧠</div>
+      <h3>The Core Idea</h3>
+      <p>A Finite Automaton (FA) is a mathematical model of computation — a simple machine that reads an input string one character at a time and decides whether to <strong style="color:#fff">accept</strong> or <strong style="color:#ff6060">reject</strong> it.</p>
+      <p>Think of it as a flowchart with a fixed set of "rooms" (states). You start in one room and follow arrows (transitions) based on what you read. At the end, if you're in a special "accepting room," the string is accepted.</p>
+    </div>
+    <div class="learn-card highlight-orange">
+      <div class="card-icon">🏗️</div>
+      <h3>5 Formal Components</h3>
+      <p>Every finite automaton is defined by a 5-tuple (Q, Σ, δ, q₀, F):</p>
+      <ul>
+        <li><strong style="color:var(--c-orange)">Q</strong> — Finite set of states</li>
+        <li><strong style="color:var(--c-orange)">Σ</strong> — Alphabet (input symbols)</li>
+        <li><strong style="color:var(--c-orange)">δ</strong> — Transition function</li>
+        <li><strong style="color:var(--c-orange)">q₀</strong> — Start state (q₀ ∈ Q)</li>
+        <li><strong style="color:var(--c-orange)">F</strong> — Set of accept states (F ⊆ Q)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="learn-section-title"><span>⚖️</span> DFA vs NFA — What's the Difference?</div>
+
+  <div class="learn-card full highlight-amber">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th>DFA — Deterministic</th>
+          <th>NFA — Nondeterministic</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Transitions</td>
+          <td>Exactly one per (state, symbol) pair</td>
+          <td>Zero, one, or many per (state, symbol)</td>
+        </tr>
+        <tr>
+          <td>Epsilon (ε)</td>
+          <td>Not allowed</td>
+          <td>Allowed — "free" transitions with no input consumed</td>
+        </tr>
+        <tr>
+          <td>Multiple paths</td>
+          <td>No — single path through states</td>
+          <td>Yes — explores all paths simultaneously (conceptually)</td>
+        </tr>
+        <tr>
+          <td>Acceptance</td>
+          <td>Accept if final state is an accept state</td>
+          <td>Accept if ANY possible path ends in an accept state</td>
+        </tr>
+        <tr>
+          <td>Computational power</td>
+          <td colspan="2" style="text-align:center;color:var(--c-amber);font-weight:600">Exactly the same — every NFA can be converted to an equivalent DFA</td>
+        </tr>
+        <tr>
+          <td>Implementation</td>
+          <td>Simpler, direct</td>
+          <td>More expressive to design, subset construction for DFA conversion</td>
+        </tr>
+        <tr>
+          <td>Dead states</td>
+          <td>Can reach a dead (trap) state → immediate reject</td>
+          <td>Missing transition = that branch dies; other branches continue</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="learn-section-title"><span>🔵</span> DFA — Deterministic Finite Automaton</div>
+
+  <div class="learn-grid">
+    <div class="learn-card highlight-orange">
+      <div class="tag tag-dfa">DFA</div>
+      <h3>How DFA Works</h3>
+      <p>In a DFA, every state must have exactly one transition for every symbol in the alphabet. There is no ambiguity — at any point in time, the machine is in exactly one state.</p>
+      <div class="formula-box">
+        δ: Q × Σ → Q<br>
+        (state, symbol) → next state
+      </div>
+      <p>The transition function δ is <em>total</em> — defined for every possible combination. If you don't define a transition, it implicitly goes to a "dead" reject state.</p>
+    </div>
+    <div class="learn-card">
+      <div class="tag tag-dfa">DFA Example</div>
+      <h3>Even Number of 0s</h3>
+      <p>This DFA accepts all binary strings containing an even count of the digit 0:</p>
+      <ul>
+        <li>q0 = start & accept (even 0s seen so far)</li>
+        <li>q1 = odd number of 0s seen</li>
+        <li>On 0: toggle between q0 and q1</li>
+        <li>On 1: stay in current state</li>
+      </ul>
+      <p style="margin-top:10px">Try it: <code style="background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--c-amber)">00110</code> → Accept · <code style="background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--c-red)">010</code> → Reject</p>
+      <button class="btn btn-secondary btn-sm" style="margin-top:10px;width:auto" onclick="loadPreset('even0s');showPage('builder')">Load in Builder →</button>
+    </div>
+  </div>
+
+  <div class="learn-section-title"><span>🟣</span> NFA — Nondeterministic Finite Automaton</div>
+
+  <div class="learn-grid">
+    <div class="learn-card highlight-purple">
+      <div class="tag tag-nfa">NFA</div>
+      <h3>How NFA Works</h3>
+      <p>In an NFA, a state can have zero, one, or multiple transitions on the same symbol. Additionally, ε (epsilon) transitions allow jumping to states without consuming any input.</p>
+      <div class="formula-box">
+        δ: Q × (Σ ∪ {ε}) → 2<sup>Q</sup><br>
+        (state, symbol) → set of states
+      </div>
+      <p>The NFA "guesses" the right path. We say it accepts a string if <em>at least one</em> possible computation path leads to an accept state.</p>
+    </div>
+    <div class="learn-card">
+      <div class="tag tag-nfa">NFA Example</div>
+      <h3>Strings Ending in "01"</h3>
+      <p>This NFA accepts binary strings that end with "01":</p>
+      <ul>
+        <li>q0 = start (loop on 0 and 1)</li>
+        <li>On 0 from q0 → also go to q1 (guess this is the last 0)</li>
+        <li>On 1 from q1 → go to q2 (accept)</li>
+        <li>q2 = accept state</li>
+      </ul>
+      <p style="margin-top:10px">The "split" on 0 is nondeterminism — both paths explored at once!</p>
+      <button class="btn btn-secondary btn-sm" style="margin-top:10px;width:auto" onclick="loadPreset('nfa01');showPage('builder')">Load in Builder →</button>
+    </div>
+  </div>
+
+  <div class="learn-section-title"><span>ε</span> Epsilon (ε) Transitions Explained</div>
+
+  <div class="learn-card full">
+    <div class="card-icon">⚡</div>
+    <h3>What is an Epsilon Transition?</h3>
+    <p>An epsilon (ε) transition — also called a "free move" or "lambda transition" — allows the NFA to move from one state to another <strong style="color:#fff">without reading any input symbol</strong>. The input tape does not advance.</p>
+
+    <div class="epsilon-explain">
+      <h4>ε-closure(S)</h4>
+      <p>The epsilon-closure of a set of states S is all states reachable from S by following zero or more epsilon transitions. When simulating an NFA, after every move (including at the start), we immediately compute the ε-closure of the current set of active states.</p>
+    </div>
+
+    <div style="margin-top:16px">
+      <h3 style="font-size:15px;margin-bottom:10px">Why Are ε-transitions Useful?</h3>
+      <ul>
+        <li>They make NFA design much easier — think of them as "free shortcuts" in your machine</li>
+        <li>Simplify expressing alternation: "match pattern A <em>or</em> pattern B" becomes easy with ε-transitions to both sub-machines</li>
+        <li>They're the foundation of how regular expressions are compiled to automata (Thompson's construction)</li>
+        <li>Any NFA with ε-transitions can be converted to one without them (ε-removal algorithm)</li>
+      </ul>
+    </div>
+
+    <div class="formula-box" style="margin-top:14px">
+      Example: q0 --ε→ q1 means: whenever the machine is in q0,<br>
+      it can simultaneously also be in q1 at no cost.
+    </div>
+
+    <button class="btn btn-secondary btn-sm" style="margin-top:14px;width:auto" onclick="loadPreset('nfaEpsilon');showPage('builder')">See ε-NFA Example in Builder →</button>
+  </div>
+
+  <div class="learn-section-title"><span>🎯</span> How to Build Your Own FA — Step by Step</div>
+
+  <div class="learn-card full">
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num-bubble">1</div>
+        <div class="step-item-content">
+          <h4>Define the Language</h4>
+          <p>Write out in plain English what strings your FA should accept. Example: "All binary strings with an odd number of 1s." Test your understanding by generating a few accept and reject examples by hand.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-bubble">2</div>
+        <div class="step-item-content">
+          <h4>Choose DFA or NFA</h4>
+          <p>Use a DFA when the pattern can be tracked with a clear finite count of "status" conditions. Use an NFA when the pattern is easier to express nondeterministically (e.g., "ending with XY" — NFA is more natural; you guess when you see the beginning of the suffix).</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-bubble">3</div>
+        <div class="step-item-content">
+          <h4>Identify Distinct "Memory" Conditions</h4>
+          <p>Each state represents what the machine "remembers" about what it has seen so far. For "even number of 0s," you only need to remember whether the count is even or odd — so 2 states. Name and create those states.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-bubble">4</div>
+        <div class="step-item-content">
+          <h4>Mark Start and Accept States</h4>
+          <p>Exactly one state is the start state (the machine begins here). One or more states are accept states (being here when input ends means "accept"). In the Builder, click a state in the list to toggle accept, or right-click on the canvas for the context menu.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-bubble">5</div>
+        <div class="step-item-content">
+          <h4>Add Transitions</h4>
+          <p>For each state and each input symbol, decide where the machine should go. For DFA, every state needs a transition for every symbol in the alphabet. For NFA, transitions are optional — missing means "this path dies." Add ε-transitions to allow free moves between states.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-bubble">6</div>
+        <div class="step-item-content">
+          <h4>Test with the Simulator</h4>
+          <p>Enter strings you expect to be accepted and strings you expect to be rejected. Use the Step button to watch how the machine processes each character. Check the transition table to make sure every case is covered.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="learn-section-title"><span>📐</span> Key Theorems to Know</div>
+
+  <div class="learn-grid">
+    <div class="learn-card">
+      <div class="tag tag-both">Equivalence</div>
+      <h3>DFA = NFA in Power</h3>
+      <p>Despite their apparent differences, DFAs and NFAs recognize exactly the same class of languages: the <strong style="color:#fff">Regular Languages</strong>.</p>
+      <p>The proof is constructive — using the <em>Subset Construction</em> (powerset construction) algorithm, any NFA with n states can be converted to a DFA with at most 2ⁿ states.</p>
+    </div>
+    <div class="learn-card">
+      <div class="tag tag-both">Closure Properties</div>
+      <h3>Regular Languages are Closed Under</h3>
+      <ul>
+        <li>Union (L₁ ∪ L₂)</li>
+        <li>Concatenation (L₁ · L₂)</li>
+        <li>Kleene star (L*)</li>
+        <li>Complement (L̄)</li>
+        <li>Intersection (L₁ ∩ L₂)</li>
+        <li>Reversal (Lᴿ)</li>
+      </ul>
+    </div>
+    <div class="learn-card">
+      <div class="tag tag-dfa">DFA Minimization</div>
+      <h3>Minimizing a DFA</h3>
+      <p>For every regular language there exists a unique minimal DFA (fewest states). The Myhill-Nerode theorem tells us the number of states needed equals the number of distinguishable equivalence classes of strings.</p>
+      <p>Use the table-filling algorithm to merge indistinguishable states.</p>
+    </div>
+    <div class="learn-card">
+      <div class="tag tag-both">Pumping Lemma</div>
+      <h3>Proving Non-Regularity</h3>
+      <p>Not all languages are regular! The <em>Pumping Lemma</em> gives a necessary condition for regular languages — if a language fails it, no FA can recognize it.</p>
+      <p>Example: {aⁿbⁿ | n ≥ 0} (equal a's and b's) is NOT regular — it requires infinite memory.</p>
+    </div>
+  </div>
+
+  <div class="learn-section-title"><span>💡</span> Common Patterns & Tips</div>
+
+  <div class="learn-card full">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <h3 style="margin-bottom:12px;font-size:15px">DFA Design Patterns</h3>
+        <ul>
+          <li>Counting mod n → needs n states arranged in a cycle</li>
+          <li>Ends with pattern P of length k → needs 2ᵏ states in worst case (DFA) or just k+1 states (NFA)</li>
+          <li>Contains substring → use KMP-like structure; needs |P|+1 states</li>
+          <li>Starts with prefix → linear chain of states for the prefix</li>
+          <li>Both A and B → product construction (|A| × |B| states)</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="margin-bottom:12px;font-size:15px">NFA Design Tips</h3>
+        <ul>
+          <li>Use ε-transitions to compose machines (A then B: connect A's accept to B's start with ε)</li>
+          <li>For union of L₁ and L₂: new start state → ε to both machines' starts</li>
+          <li>For Kleene star L*: add ε from accept states back to start</li>
+          <li>For "suffix" patterns, NFA is simpler than DFA — guess when the suffix begins</li>
+          <li>Every regex has a direct NFA via Thompson's construction</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// ============================================================
+//  DATA MODEL
+// ============================================================
+let mode = 'DFA';
+let states = [];      // { id, name, x, y, isStart, isAccept }
+let transitions = []; // { id, from, sym, to }
+let stateIdCounter = 0;
+let transIdCounter = 0;
+
+let tool = 'select';
+let connectFrom = null;
+let hoveredState = null;
+let contextState = null;
+let canvas, ctx;
+
+let simActive = false;
+let simStep = 0;
+let simInput = '';
+let simCurrent = null;
+let simAutoTimer = null;
+let simDone = false;
+let activeTransId = null;
+
+const STATE_R = 30;
+const ARROW_HEAD = 9;
+
+// ============================================================
+//  PAGE NAV
+// ============================================================
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'builder') { setTimeout(() => { resizeCanvas(); render(); }, 50); }
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+window.addEventListener('load', () => {
+  canvas = document.getElementById('fa-canvas');
+  ctx = canvas.getContext('2d');
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  canvas.addEventListener('dblclick', onDblClick);
+  canvas.addEventListener('mousedown', onMouseDown);
+  canvas.addEventListener('mousemove', onMouseMove);
+  canvas.addEventListener('mouseup', onMouseUp);
+  canvas.addEventListener('contextmenu', onRightClick);
+  document.addEventListener('click', () => {
+    document.getElementById('ctx-menu').classList.remove('visible');
+  });
+  render();
+});
+
+function resizeCanvas() {
+  if (!canvas) return;
+  const area = canvas.parentElement;
+  canvas.width = area.clientWidth;
+  canvas.height = area.clientHeight;
+  render();
+}
+
+// ============================================================
+//  RENDERING
+// ============================================================
+function render() {
+  if (!canvas || !ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const gridSize = 40;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(253,66,25,0.1)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(253,126,5,0.30)';
+  for (let x = 0; x < canvas.width; x += gridSize) {
+    for (let y = 0; y < canvas.height; y += gridSize) {
+      ctx.beginPath(); ctx.arc(x, y, 1.1, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  ctx.restore();
+
+  if (states.length === 0) {
+    ctx.fillStyle = 'rgba(139,39,111,0.45)';
+    ctx.font = '13px "Space Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Double-click to add states  ·  Right-click for options', canvas.width/2, canvas.height/2);
+    return;
+  }
+
+  transitions.forEach(t => drawTransition(t));
+
+  if (connectFrom !== null && tool === 'connect') {
+    const s = getStateById(connectFrom);
+    if (s && mousePos) {
+      drawArrowLine(s.x, s.y, mousePos.x, mousePos.y, 'rgba(253,126,5,0.4)', '?');
+    }
+  }
+
+  states.forEach(s => drawState(s));
+}
+
+function drawState(s) {
+  const isHovered = hoveredState === s.id;
+  const isCurrent = isCurrentState(s.id);
+  const isStart = s.isStart;
+  const isAccept = s.isAccept;
+
+  if (isCurrent) {
+    ctx.shadowColor = 'rgba(253,66,25,0.7)';
+    ctx.shadowBlur = 22;
+  } else if (isStart && !isCurrent) {
+    ctx.shadowColor = 'rgba(253,126,5,0.4)';
+    ctx.shadowBlur = 12;
+  } else if (isAccept && !isCurrent) {
+    ctx.shadowColor = 'rgba(252,162,1,0.3)';
+    ctx.shadowBlur = 10;
+  } else if (isHovered) {
+    ctx.shadowColor = 'rgba(183,32,101,0.5)';
+    ctx.shadowBlur = 14;
+  }
+
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, STATE_R, 0, Math.PI*2);
+
+  if (isCurrent) {
+    ctx.fillStyle = 'rgba(253,66,25,0.2)';
+    ctx.strokeStyle = '#FD4219';
+    ctx.lineWidth = 2.5;
+  } else if (isHovered) {
+    ctx.fillStyle = 'rgba(183,32,101,0.2)';
+    ctx.strokeStyle = '#B72065';
+    ctx.lineWidth = 1.5;
+  } else if (isStart) {
+    ctx.fillStyle = 'rgba(253,126,5,0.12)';
+    ctx.strokeStyle = '#FD7E05';
+    ctx.lineWidth = 1.5;
+  } else {
+    ctx.fillStyle = 'rgba(139,39,111,0.2)';
+    ctx.strokeStyle = '#8B276F';
+    ctx.lineWidth = 1.5;
+  }
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  if (isAccept) {
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, STATE_R - 5, 0, Math.PI*2);
+    ctx.strokeStyle = isCurrent ? '#FD4219' : '#FCA201';
+    ctx.lineWidth = isCurrent ? 2 : 1.5;
+    ctx.setLineDash([]);
+    ctx.stroke();
+  }
+
+  if (isStart) {
+    const ax = s.x - STATE_R - 26;
+    drawArrowLine(ax, s.y, s.x - STATE_R, s.y, '#FD7E05', '');
+  }
+
+  ctx.fillStyle = isCurrent ? '#ffffff' : (isAccept ? '#FCA201' : (isStart ? '#FD7E05' : '#ffffff'));
+  ctx.font = `600 13px "Outfit", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(s.name, s.x, s.y);
+
+  let badges = [];
+  if (s.isStart) badges.push({ txt: 'S', col: '#FD7E05' });
+  if (s.isAccept) badges.push({ txt: 'A', col: '#FCA201' });
+  badges.forEach((b, i) => {
+    const bx = s.x - (badges.length - 1) * 10 + i * 20;
+    const by = s.y + STATE_R + 10;
+    ctx.fillStyle = b.col;
+    ctx.font = `700 8px "Space Mono", monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(b.txt, bx, by);
+  });
+}
+
+function drawTransition(t) {
+  const from = getStateById(t.from);
+  const to = getStateById(t.to);
+  if (!from || !to) return;
+
+  const isActive = t.id === activeTransId;
+  const isEpsilon = t.sym === 'ε';
+  let color, lineW;
+  if (isActive) { color = '#FD4219'; lineW = 2.2; }
+  else if (isEpsilon) { color = '#FCA201'; lineW = 1.3; }
+  else { color = '#8B276F'; lineW = 1.3; }
+
+  if (from.id === to.id) {
+    // Find other self-loops to offset
+    const selfLoops = transitions.filter(tx => tx.from === from.id && tx.to === to.id);
+    const idx = selfLoops.findIndex(tx => tx.id === t.id);
+    drawSelfLoop(from, t.sym, color, lineW, isActive, idx, selfLoops.length);
+    return;
+  }
+
+  // Check for reverse transition
+  const rev = transitions.find(tx => tx.from === t.to && tx.to === t.from && tx.id !== t.id);
+  // Check for parallel transitions (same from/to)
+  const parallel = transitions.filter(tx => tx.from === t.from && tx.to === t.to);
+  const pIdx = parallel.findIndex(tx => tx.id === t.id);
+
+  if (rev) {
+    drawCurvedArrow(from, to, t.sym, color, lineW, isActive, 1, isEpsilon);
+  } else if (parallel.length > 1) {
+    // Multiple edges: curve them at different offsets
+    const offset = (pIdx - (parallel.length - 1) / 2) * 30;
+    drawCurvedArrow(from, to, t.sym, color, lineW, isActive, offset / 50, isEpsilon);
+  } else {
+    drawStraightArrow(from, to, t.sym, color, lineW, isActive, isEpsilon);
+  }
+}
+
+function drawStraightArrow(from, to, sym, color, lineW, isActive, isEpsilon) {
+  const angle = Math.atan2(to.y - from.y, to.x - from.x);
+  const sx = from.x + Math.cos(angle) * STATE_R;
+  const sy = from.y + Math.sin(angle) * STATE_R;
+  const ex = to.x - Math.cos(angle) * (STATE_R + 3);
+  const ey = to.y - Math.sin(angle) * (STATE_R + 3);
+
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(ex, ey);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineW;
+  if (isEpsilon) ctx.setLineDash([5, 3]);
+  else ctx.setLineDash([]);
+  if (isActive) { ctx.shadowColor = 'rgba(253,66,25,0.5)'; ctx.shadowBlur = 8; }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.setLineDash([]);
+
+  drawArrowHead(ex, ey, angle, color);
+
+  const mx = (sx + ex) / 2;
+  const my = (sy + ey) / 2;
+  const perpX = -Math.sin(angle) * 15;
+  const perpY = Math.cos(angle) * 15;
+  drawTransLabel(mx + perpX, my + perpY, sym, isActive, isEpsilon);
+}
+
+function drawCurvedArrow(from, to, sym, color, lineW, isActive, dir, isEpsilon) {
+  const angle = Math.atan2(to.y - from.y, to.x - from.x);
+  const curve = 48 * dir;
+  const mx = (from.x + to.x) / 2 - Math.sin(angle) * curve;
+  const my = (from.y + to.y) / 2 + Math.cos(angle) * curve;
+
+  const sx = from.x + Math.cos(angle) * STATE_R;
+  const sy = from.y + Math.sin(angle) * STATE_R;
+  const endAngle = Math.atan2(to.y - my, to.x - mx);
+  const ex = to.x - Math.cos(endAngle) * (STATE_R + 3);
+  const ey = to.y - Math.sin(endAngle) * (STATE_R + 3);
+
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.quadraticCurveTo(mx, my, ex, ey);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineW;
+  if (isEpsilon) ctx.setLineDash([5, 3]);
+  else ctx.setLineDash([]);
+  if (isActive) { ctx.shadowColor = 'rgba(253,66,25,0.5)'; ctx.shadowBlur = 8; }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.setLineDash([]);
+  drawArrowHead(ex, ey, endAngle, color);
+
+  const lx = (sx + ex) / 2 * 0.4 + mx * 0.6;
+  const ly = (sy + ey) / 2 * 0.4 + my * 0.6;
+  drawTransLabel(lx, ly, sym, isActive, isEpsilon);
+}
+
+function drawSelfLoop(s, sym, color, lineW, isActive, idx, total) {
+  const loopR = 20;
+  // Spread multiple self-loops around the state
+  const angles = [-Math.PI/2, Math.PI/2, 0, Math.PI];
+  const baseAngle = angles[idx % angles.length] || -Math.PI/2;
+  const lx = s.x + Math.cos(baseAngle) * (STATE_R + loopR);
+  const ly = s.y + Math.sin(baseAngle) * (STATE_R + loopR);
+
+  ctx.beginPath();
+  ctx.arc(lx, ly, loopR, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineW;
+  if (sym === 'ε') ctx.setLineDash([5, 3]);
+  else ctx.setLineDash([]);
+  if (isActive) { ctx.shadowColor = 'rgba(253,66,25,0.5)'; ctx.shadowBlur = 8; }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.setLineDash([]);
+
+  // Arrowhead
+  const arrowAngle = baseAngle + Math.PI/2 + 0.4;
+  const arrowX = lx + Math.cos(baseAngle + Math.PI/2) * loopR;
+  const arrowY = ly + Math.sin(baseAngle + Math.PI/2) * loopR;
+  drawArrowHead(arrowX, arrowY, arrowAngle, color);
+
+  const labelOffset = 16;
+  drawTransLabel(lx + Math.cos(baseAngle) * labelOffset, ly + Math.sin(baseAngle) * labelOffset, sym, isActive, sym === 'ε');
+}
+
+function drawArrowHead(x, y, angle, color) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(-ARROW_HEAD, -4.5);
+  ctx.lineTo(-ARROW_HEAD, 4.5);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawArrowLine(x1, y1, x2, y2, color, label) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.4;
+  ctx.setLineDash([]);
+  ctx.stroke();
+  const angle = Math.atan2(y2-y1, x2-x1);
+  drawArrowHead(x2, y2, angle, color);
+}
+
+function drawTransLabel(x, y, sym, isActive, isEpsilon) {
+  const pad = 4;
+  ctx.font = `700 11px "Space Mono", monospace`;
+  const w = ctx.measureText(sym).width + pad*2;
+  const h = 16;
+
+  if (isEpsilon) {
+    ctx.fillStyle = isActive ? 'rgba(252,162,1,0.2)' : 'rgba(13,0,10,0.9)';
+    ctx.strokeStyle = isActive ? '#FCA201' : '#FCA201';
+  } else {
+    ctx.fillStyle = isActive ? 'rgba(253,66,25,0.15)' : 'rgba(13,0,10,0.9)';
+    ctx.strokeStyle = isActive ? '#FD4219' : '#8B276F';
+  }
+  ctx.lineWidth = 1;
+  roundRect(ctx, x - w/2, y - h/2, w, h, 4);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = isEpsilon ? (isActive ? '#FCA201' : '#FCA201') : (isActive ? '#FD4219' : '#C77CBF');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(sym, x, y);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+// ============================================================
+//  STATE MANAGEMENT
+// ============================================================
+function addState(name, x, y) {
+  const nm = name || document.getElementById('state-name-input').value.trim() || `q${states.length}`;
+  if (states.find(s => s.name === nm)) { logEntry(`State "${nm}" already exists`, 'warn'); return null; }
+  const cx = (x !== undefined) ? x : canvas.width/2 + (Math.random()-0.5)*200;
+  const cy = (y !== undefined) ? y : canvas.height/2 + (Math.random()-0.5)*150;
+  const s = { id: ++stateIdCounter, name: nm, x: cx, y: cy, isStart: states.length === 0, isAccept: false };
+  states.push(s);
+  document.getElementById('state-name-input').value = '';
+  logEntry(`State ${nm} added${s.isStart?' (start)':''}`, 'step');
+  updateUI();
+  render();
+  return s;
+}
+
+function removeState(id) {
+  const s = getStateById(id);
+  if (!s) return;
+  const wasStart = s.isStart;
+  states = states.filter(st => st.id !== id);
+  transitions = transitions.filter(t => t.from !== id && t.to !== id);
+  if (wasStart && states.length > 0) states[0].isStart = true;
+  logEntry(`State deleted`, 'warn');
+  updateUI(); render();
+}
+
+function addTransition() {
+  const from = parseInt(document.getElementById('trans-from').value);
+  const to = parseInt(document.getElementById('trans-to').value);
+  const sym = document.getElementById('trans-sym').value.trim();
+  if (!sym) { logEntry('Symbol required', 'warn'); return; }
+  if (isNaN(from) || isNaN(to)) { logEntry('Select valid states', 'warn'); return; }
+
+  if (mode === 'DFA') {
+    const dup = transitions.find(t => t.from === from && t.sym === sym);
+    if (dup) {
+      logEntry(`DFA: State "${getStateById(from).name}" already has transition on "${sym}" — switch to NFA for multiple edges`, 'warn');
+      return;
+    }
+    if (sym === 'ε') {
+      logEntry('DFA cannot have epsilon transitions — switch to NFA mode', 'warn');
+      return;
+    }
+  }
+
+  const t = { id: ++transIdCounter, from, sym, to };
+  transitions.push(t);
+  document.getElementById('trans-sym').value = '';
+  logEntry(`Transition: ${getStateById(from).name} →[${sym}]→ ${getStateById(to).name}`, 'step');
+  updateUI(); render();
+}
+
+function insertEpsilon() {
+  const inp = document.getElementById('trans-sym');
+  inp.value = 'ε';
+  inp.focus();
+}
+
+function clearAll() {
+  states = []; transitions = [];
+  stateIdCounter = 0; transIdCounter = 0;
+  resetSim();
+  updateUI(); render();
+  logEntry('Cleared all states and transitions', 'warn');
+}
+
+// ============================================================
+//  UI UPDATES
+// ============================================================
+function updateUI() {
+  updateStateList();
+  updateStateSelects();
+  updateTransList();
+  updateAlphabet();
+  updateTransTable();
+}
+
+function updateStateList() {
+  const el = document.getElementById('state-list');
+  el.innerHTML = '';
+  states.forEach(s => {
+    const div = document.createElement('div');
+    div.className = `state-item${s.isStart?' is-start':''}${s.isAccept?' is-accept':''}`;
+    div.innerHTML = `
+      <div class="state-dot"></div>
+      <span class="state-label">${s.name}</span>
+      <div class="state-badges">
+        ${s.isStart ? '<span class="s-badge s-badge-start">START</span>' : ''}
+        ${s.isAccept ? '<span class="s-badge s-badge-accept">ACCEPT</span>' : ''}
+      </div>
+      <div class="state-actions">
+        <button class="state-edit" onclick="event.stopPropagation();renameStateById(${s.id})" title="Rename">✎</button>
+        <button class="state-del" onclick="event.stopPropagation();removeState(${s.id})" title="Delete">✕</button>
+      </div>
+    `;
+    div.onclick = (e) => {
+      if (e.target.classList.contains('state-del') || e.target.classList.contains('state-edit')) return;
+      s.isAccept = !s.isAccept;
+      logEntry(`${s.name}: accept = ${s.isAccept}`, '');
+      updateUI(); render();
+    };
+    el.appendChild(div);
+  });
+}
+
+function renameStateById(id) {
+  const s = getStateById(id);
+  if (!s) return;
+  const nm = prompt('Rename state:', s.name);
+  if (nm && nm.trim() && !states.find(x => x.name === nm.trim() && x.id !== s.id)) {
+    s.name = nm.trim(); updateUI(); render();
+    logEntry(`State renamed to ${s.name}`, '');
+  }
+}
+
+function updateStateSelects() {
+  ['trans-from','trans-to'].forEach(id => {
+    const sel = document.getElementById(id);
+    const prev = sel.value;
+    sel.innerHTML = '';
+    states.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id; opt.textContent = s.name;
+      sel.appendChild(opt);
+    });
+    if (prev) sel.value = prev;
+  });
+}
+
+function updateTransList() {
+  const el = document.getElementById('trans-list');
+  el.innerHTML = '';
+  transitions.forEach(t => {
+    const from = getStateById(t.from);
+    const to = getStateById(t.to);
+    if (!from || !to) return;
+    const div = document.createElement('div');
+    div.className = `trans-item${t.id === activeTransId ? ' active-trans' : ''}`;
+    const isEps = t.sym === 'ε';
+    div.innerHTML = `
+      <span style="color:var(--c-orange);font-family:var(--font-mono);font-size:11px">${from.name}</span>
+      <span class="trans-arrow">→</span>
+      <span class="trans-sym${isEps ? ' epsilon-sym' : ''}">${t.sym}</span>
+      <span class="trans-arrow">→</span>
+      <span style="color:var(--c-amber);font-family:var(--font-mono);font-size:11px">${to.name}</span>
+      <button class="state-del" style="margin-left:auto;font-size:12px" onclick="removeTrans(${t.id})" title="Delete">✕</button>
+    `;
+    el.appendChild(div);
+  });
+}
+
+function updateAlphabet() {
+  const syms = [...new Set(transitions.map(t => t.sym))].sort();
+  const el = document.getElementById('alphabet-display');
+  if (syms.length === 0) {
+    el.innerHTML = '<span style="color:var(--text3);font-size:11px;font-family:var(--font-mono)">No symbols defined</span>';
+    return;
+  }
+  el.innerHTML = syms.map(s => `<span class="alph-badge${s==='ε'?' epsilon':''}">${s}</span>`).join('');
+}
+
+function updateTransTable() {
+  const syms = [...new Set(transitions.map(t => t.sym))].sort();
+  const el = document.getElementById('trans-table-area');
+  if (states.length === 0 || syms.length === 0) {
+    el.innerHTML = '<span style="color:var(--text3);font-size:11px;font-family:var(--font-mono)">Add transitions to see table</span>';
+    return;
+  }
+  let html = '<table class="trans-table"><thead><tr><th>δ</th>';
+  syms.forEach(s => html += `<th>${s}</th>`);
+  html += '</tr></thead><tbody>';
+  states.forEach(s => {
+    const rowActive = isCurrentState(s.id);
+    html += `<tr class="${rowActive ? 'active-row' : ''}"><td>${s.name}</td>`;
+    syms.forEach(sym => {
+      const ts = transitions.filter(t => t.from === s.id && t.sym === sym);
+      const toNames = ts.map(t => getStateById(t.to)?.name || '?').join(',');
+      html += `<td class="${toNames ? 'trans-val' : ''}">${toNames || '—'}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function removeTrans(id) {
+  transitions = transitions.filter(t => t.id !== id);
+  logEntry('Transition removed', 'warn');
+  updateUI(); render();
+}
+
+// ============================================================
+//  MODE
+// ============================================================
+function setMode(m) {
+  mode = m;
+  document.getElementById('mode-dfa').classList.toggle('active-mode', m === 'DFA');
+  document.getElementById('mode-nfa').classList.toggle('active-mode', m === 'NFA');
+  document.getElementById('nfa-active-area').style.display = m === 'NFA' ? 'block' : 'none';
+  resetSim();
+  logEntry(`Mode: ${m}`, '');
+}
+
+// ============================================================
+//  TOOLS
+// ============================================================
+function setTool(t) {
+  tool = t;
+  connectFrom = null;
+  ['select','move','connect'].forEach(n => {
+    document.getElementById(`tool-${n}`).classList.toggle('active', n === t);
+  });
+  canvas.style.cursor = t === 'select' ? 'default' : t === 'move' ? 'grab' : 'crosshair';
+  const hints = {
+    select: 'Click state to toggle accept · Double-click canvas to add · Right-click for options',
+    move: 'Drag states to reposition',
+    connect: 'Click source state, then target state to add transition'
+  };
+  document.getElementById('canvas-hint').textContent = hints[t];
+}
+
+// ============================================================
+//  MOUSE EVENTS
+// ============================================================
+let mousePos = null;
+let dragging = null;
+
+function getStateAt(x, y) {
+  return states.find(s => Math.hypot(s.x - x, s.y - y) <= STATE_R);
+}
+
+function onDblClick(e) {
+  const r = canvas.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  const s = getStateAt(x, y);
+  if (!s) addState(null, x, y);
+}
+
+function onMouseDown(e) {
+  if (e.button !== 0) return;
+  const r = canvas.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  const s = getStateAt(x, y);
+  if (s && tool === 'move') {
+    dragging = s;
+    canvas.style.cursor = 'grabbing';
+  }
+  if (s && tool === 'connect') {
+    if (connectFrom === null) {
+      connectFrom = s.id;
+      logEntry(`Connect from: ${s.name} — click target state`, '');
+    } else {
+      const sym = prompt(`Transition symbol from ${getStateById(connectFrom).name} to ${s.name}:\n(Use ε for epsilon transition)`);
+      if (sym !== null && sym.trim()) {
+        const cleanSym = sym.trim();
+        document.getElementById('trans-sym').value = cleanSym;
+        document.getElementById('trans-from').value = connectFrom;
+        document.getElementById('trans-to').value = s.id;
+        addTransition();
+        document.getElementById('trans-sym').value = '';
+      }
+      connectFrom = null;
+    }
+  }
+}
+
+function onMouseMove(e) {
+  const r = canvas.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  mousePos = { x, y };
+  if (dragging) {
+    dragging.x = x; dragging.y = y;
+    render(); return;
+  }
+  const s = getStateAt(x, y);
+  const prev = hoveredState;
+  hoveredState = s ? s.id : null;
+  if (prev !== hoveredState) render();
+}
+
+function onMouseUp(e) {
+  if (dragging) { dragging = null; canvas.style.cursor = 'grab'; render(); }
+}
+
+function onRightClick(e) {
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  const s = getStateAt(x, y);
+  if (!s) return;
+  contextState = s.id;
+  const menu = document.getElementById('ctx-menu');
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  const ctx_accept = document.getElementById('ctx-accept');
+  ctx_accept.innerHTML = `<span class="ci">◎</span> ${s.isAccept ? 'Remove Accept' : 'Set as Accept'}`;
+  menu.classList.add('visible');
+}
+
+function ctxSetStart() {
+  states.forEach(s => s.isStart = s.id === contextState);
+  logEntry(`Start state set to ${getStateById(contextState)?.name}`, '');
+  updateUI(); render();
+}
+function ctxToggleAccept() {
+  const s = getStateById(contextState);
+  if (s) { s.isAccept = !s.isAccept; logEntry(`${s.name} accept: ${s.isAccept}`, ''); updateUI(); render(); }
+}
+function ctxRename() {
+  const s = getStateById(contextState);
+  if (!s) return;
+  const nm = prompt('Rename state:', s.name);
+  if (nm && nm.trim() && !states.find(x => x.name === nm.trim() && x.id !== s.id)) {
+    s.name = nm.trim(); updateUI(); render();
+    logEntry(`State renamed to ${s.name}`, '');
+  }
+}
+function ctxDelete() { removeState(contextState); }
+
+// ============================================================
+//  SIMULATION
+// ============================================================
+function isCurrentState(id) {
+  if (!simActive && simStep === 0 && !simDone) return false;
+  if (mode === 'DFA') return simCurrent === id;
+  if (mode === 'NFA') return Array.isArray(simCurrent) && simCurrent.includes(id);
+  return false;
+}
+
+function startSim() {
+  resetSim(true);
+  simInput = document.getElementById('sim-input').value;
+  if (simInput === undefined || simInput === null) { logEntry('Enter an input string', 'warn'); return; }
+  const startState = states.find(s => s.isStart);
+  if (!startState) { logEntry('No start state defined!', 'warn'); return; }
+
+  simActive = true;
+  simStep = 0;
+  simDone = false;
+
+  if (mode === 'DFA') {
+    simCurrent = startState.id;
+  } else {
+    simCurrent = epsilonClosure([startState.id]);
+  }
+
+  if (simInput.length === 0) {
+    // Empty string: finalize immediately
+    updateTapeDisplay();
+    finalizeSim();
+    return;
+  }
+
+  updateTapeDisplay();
+  updateStepInfo(`Start: ${startState.name}`, 0);
+  setSimStatus('running', 'SIMULATING...');
+  logEntry(`--- Simulation: "${simInput || 'ε'}" ---`, 'step');
+  render();
+  updateUI();
+
+  const speed = parseInt(document.getElementById('speed-slider').value);
+  simAutoTimer = setInterval(() => stepSim(true), 2100 - speed);
+}
+
+function stepSim(auto = false) {
+  if (!simActive) {
+    if (!auto) startSim();
+    return;
+  }
+  if (simDone) { if (!auto) resetSim(); return; }
+
+  if (simStep >= simInput.length) {
+    finalizeSim(); return;
+  }
+
+  const sym = simInput[simStep];
+  activeTransId = null;
+
+  if (mode === 'DFA') {
+    const trans = transitions.find(t => t.from === simCurrent && t.sym === sym);
+    if (!trans) {
+      logEntry(`No δ(${getStateById(simCurrent)?.name}, '${sym}') → REJECTED`, 'fail');
+      setSimStatus('rejected', '✕ REJECTED');
+      updateStepInfo(`Dead state: no δ(${getStateById(simCurrent)?.name}, ${sym})`, simStep + 1);
+      simDone = true; simActive = false;
+      clearInterval(simAutoTimer);
+      updateTapeDisplay(simStep, true);
+      render(); updateUI(); return;
+    }
+    const fromName = getStateById(simCurrent)?.name;
+    activeTransId = trans.id;
+    simCurrent = trans.to;
+    const toName = getStateById(simCurrent)?.name;
+    logEntry(`δ(${fromName}, '${sym}') = ${toName}`, 'step');
+    updateStepInfo(`δ(${fromName}, '${sym}') → ${toName}`, simStep + 1);
+  } else {
+    const prevStates = [...simCurrent];
+    let nextStates = [];
+    prevStates.forEach(sid => {
+      const matching = transitions.filter(t => t.from === sid && t.sym === sym);
+      matching.forEach(t => { nextStates.push(t.to); if (!activeTransId) activeTransId = t.id; });
+    });
+    nextStates = epsilonClosure([...new Set(nextStates)]);
+    const fromNames = prevStates.map(id => getStateById(id)?.name).join(', ');
+    const toNames = nextStates.map(id => getStateById(id)?.name).join(', ') || '∅';
+    logEntry(`δ({${fromNames}}, '${sym}') = {${toNames}}`, 'step');
+    updateStepInfo(`{${fromNames}} ×'${sym}'→ {${toNames}}`, simStep + 1);
+    simCurrent = nextStates;
+    updateNFADisplay();
+  }
+
+  const processedIdx = simStep;
+  simStep++;
+  updateTapeDisplay(processedIdx);
+
+  if (simStep >= simInput.length) finalizeSim();
+  render(); updateUI();
+}
+
+function finalizeSim() {
+  simDone = true;
+  simActive = false;
+  clearInterval(simAutoTimer);
+  activeTransId = null;
+
+  let accepted = false;
+  if (mode === 'DFA') {
+    const s = getStateById(simCurrent);
+    accepted = s && s.isAccept;
+  } else {
+    accepted = Array.isArray(simCurrent) && simCurrent.some(id => {
+      const s = getStateById(id); return s && s.isAccept;
+    });
+  }
+
+  if (accepted) {
+    setSimStatus('accepted', '✓ ACCEPTED');
+    logEntry(`"${simInput || 'ε'}" → ACCEPTED ✓`, 'success');
+  } else {
+    setSimStatus('rejected', '✕ REJECTED');
+    logEntry(`"${simInput || 'ε'}" → REJECTED ✕`, 'fail');
+  }
+  render(); updateUI();
+}
+
+function resetSim(keepInput = false) {
+  clearInterval(simAutoTimer);
+  simActive = false; simStep = 0; simDone = false;
+  simCurrent = null; activeTransId = null;
+  if (!keepInput) {
+    const startState = states.find(s => s.isStart);
+    if (mode === 'NFA') simCurrent = startState ? epsilonClosure([startState.id]) : [];
+    else simCurrent = startState ? startState.id : null;
+  }
+  setSimStatus('idle', 'READY');
+  document.getElementById('tape-display').innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Enter a string to simulate...</span>';
+  document.getElementById('step-info').innerHTML = '<span style="color:var(--text3);font-size:11px;font-family:var(--font-mono)">Simulation log will appear here...</span>';
+  document.getElementById('nfa-active-display').innerHTML = '';
+  render(); updateUI();
+}
+
+function epsilonClosure(stateIds) {
+  const closure = new Set(stateIds);
+  const stack = [...stateIds];
+  while (stack.length) {
+    const id = stack.pop();
+    transitions.filter(t => t.from === id && t.sym === 'ε').forEach(t => {
+      if (!closure.has(t.to)) { closure.add(t.to); stack.push(t.to); }
+    });
+  }
+  return [...closure];
+}
+
+function updateTapeDisplay(current = -1, dead = false) {
+  const el = document.getElementById('tape-display');
+  if (simInput === '' || simInput === undefined) {
+    el.innerHTML = '<span class="tape-cell" style="font-size:11px;width:36px">ε</span>';
+    return;
+  }
+  if (!simInput) { el.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Enter a string to simulate...</span>'; return; }
+  el.innerHTML = simInput.split('').map((ch, i) => {
+    let cls = 'tape-cell';
+    if (dead) {
+      cls += i <= current ? ' done' : '';
+    } else if (i === current && current >= 0) {
+      cls += ' current';
+    } else if (i < current) {
+      cls += ' done';
+    }
+    return `<span class="${cls}">${ch}</span>`;
+  }).join('');
+}
+
+function setSimStatus(type, text) {
+  const el = document.getElementById('sim-status');
+  el.className = `sim-status ${type}`;
+  el.textContent = text;
+}
+
+function updateStepInfo(text, step) {
+  document.getElementById('step-info').innerHTML =
+    `<span style="color:var(--text3);font-family:var(--font-mono)">Step ${step}:</span> <span style="color:#fff">${text}</span>`;
+}
+
+function updateNFADisplay() {
+  if (mode !== 'NFA') return;
+  const el = document.getElementById('nfa-active-display');
+  if (!Array.isArray(simCurrent)) { el.innerHTML = ''; return; }
+  el.innerHTML = simCurrent.map(id => {
+    const s = getStateById(id);
+    return s ? `<span class="nfa-state-pill">${s.name}</span>` : '';
+  }).join('');
+}
+
+// ============================================================
+//  LOG
+// ============================================================
+function logEntry(text, type = '') {
+  const el = document.getElementById('log-area');
+  const div = document.createElement('div');
+  div.className = `log-entry ${type ? 'log-' + type : ''}`;
+  div.textContent = `> ${text}`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  while (el.children.length > 80) el.removeChild(el.firstChild);
+}
+
+// ============================================================
+//  HELPERS
+// ============================================================
+function getStateById(id) { return states.find(s => s.id === id); }
+
+// ============================================================
+//  PRESETS
+// ============================================================
+function loadPreset(name) {
+  clearAll();
+  const isNFA = name === 'nfa01' || name === 'nfaEpsilon';
+  setMode(isNFA ? 'NFA' : 'DFA');
+
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2;
+
+  if (name === 'even0s') {
+    addState('q0', cx - 130, cy);
+    addState('q1', cx + 130, cy);
+    states[0].isStart = true; states[0].isAccept = true;
+    const q0 = states[0].id, q1 = states[1].id;
+    transitions.push({ id: ++transIdCounter, from: q0, sym: '0', to: q1 });
+    transitions.push({ id: ++transIdCounter, from: q0, sym: '1', to: q0 });
+    transitions.push({ id: ++transIdCounter, from: q1, sym: '0', to: q0 });
+    transitions.push({ id: ++transIdCounter, from: q1, sym: '1', to: q1 });
+    document.getElementById('sim-input').value = '00110';
+    logEntry('Preset: DFA — even 0s. Try: 00110 (accept), 010 (reject)', 'step');
+
+  } else if (name === 'endsWith1') {
+    addState('q0', cx - 130, cy);
+    addState('q1', cx + 130, cy);
+    states[0].isStart = true; states[1].isAccept = true;
+    const q0 = states[0].id, q1 = states[1].id;
+    transitions.push({ id: ++transIdCounter, from: q0, sym: '0', to: q0 });
+    transitions.push({ id: ++transIdCounter, from: q0, sym: '1', to: q1 });
+    transitions.push({ id: ++transIdCounter, from: q1, sym: '0', to: q0 });
+    transitions.push({ id: ++transIdCounter, from: q1, sym: '1', to: q1 });
+    document.getElementById('sim-input').value = '10101';
+    logEntry('Preset: DFA — ends with 1. Try: 10101 (accept), 10100 (reject)', 'step');
+
+  } else if (name === 'contains01') {
+    addState('q0', cx - 210, cy);
+    addState('q1', cx, cy);
+    addState('q2', cx + 210, cy);
+    states[0].isStart = true; states[2].isAccept = true;
+    const [q0,q1,q2] = states.map(s => s.id);
+    transitions.push({ id: ++transIdCounter, from: q0, sym: '0', to: q1 });
+    transitions.push({ id: ++transIdCounter, from: q0, sym: '1', to: q0 });
+    transitions.push({ id: ++transIdCounter, from: q1, sym: '0', to: q1 });
+    transitions.push({ id: ++transIdCounter, from: q1, sym: '1', to: q2 });
+    transitions.push({ id: ++transIdCounter, from: q2, sym: '0', to: q2 });
+    transitions.push({ id: ++transIdCounter, from: q2, sym: '1', to: q2 });
+    document.getElementById('sim-input').value = '100110';
+    logEntry('Preset: DFA — contains "01". Try: 100110 (accept), 111 (reject)', 'step');
+
+  } else if (name === 'nfa01') {
+    // NFA: strings ending with 01 — demonstrates multiple edges from same state
+    addState('q0', cx - 200, cy);
+    addState('q1', cx, cy);
+    addState('q2', cx + 200, cy);
+    states[0].isStart = true; states[2].isAccept = true;
+    const [q0,q1,q2] = states.map(s => s.id);
+    // Multiple transitions from q0 on '0' (the nondeterminism!)
+    transitions.push({ id: ++transIdCounter, from: q0, sym: '0', to: q0 });  // stay
+    transitions.push({ id: ++transIdCounter, from: q0, sym: '1', to: q0 });  // stay
+    transitions.push({ id: ++transIdCounter, from: q0, sym: '0', to: q1 });  // also go to q1 on '0'
+    transitions.push({ id: ++transIdCounter, from: q1, sym: '1', to: q2 });  // q1->q2 on 1
+    document.getElementById('sim-input').value = '10101';
+    logEntry('NFA: ends with "01". q0 has TWO transitions on 0 — nondeterminism!', 'step');
+    logEntry('Try: 10101 (accept), 11010 (reject)', 'step');
+
+  } else if (name === 'nfaEpsilon') {
+    // ε-NFA accepting (a|ab)*b — a rich example with epsilon transitions and multiple edges
+    // States: q0(start), q1, q2, q3, q4(accept)
+    // Uses: epsilon transitions + multiple edges from same state
+    const r = 175;
+    addState('q0', cx - r*1.2, cy);
+    addState('q1', cx - r*0.3, cy - r*0.6);
+    addState('q2', cx + r*0.5, cy - r*0.6);
+    addState('q3', cx - r*0.3, cy + r*0.6);
+    addState('q4', cx + r*1.0, cy);
+
+    states[0].isStart = true;
+    states[4].isAccept = true;
+
+    const [q0,q1,q2,q3,q4] = states.map(s => s.id);
+
+    // Path 1: a → q1 → (ε back to q0 for repetition) or continue
+    transitions.push({ id: ++transIdCounter, from: q0, sym: 'a', to: q1 });
+    transitions.push({ id: ++transIdCounter, from: q1, sym: 'ε', to: q0 });  // epsilon: can loop back
+    transitions.push({ id: ++transIdCounter, from: q1, sym: 'b', to: q2 });  // ab path
+    transitions.push({ id: ++transIdCounter, from: q2, sym: 'ε', to: q0 });  // epsilon: can loop back
+
+    // Path 2: directly to q3 to consume final 'b'
+    transitions.push({ id: ++transIdCounter, from: q0, sym: 'ε', to: q3 });  // epsilon shortcut
+    transitions.push({ id: ++transIdCounter, from: q3, sym: 'b', to: q4 });  // consume final b → accept
+
+    // Additional: q0 also has 'b' path for just "b"
+    transitions.push({ id: ++transIdCounter, from: q0, sym: 'b', to: q4 }); // "b" alone accepted
+
+    document.getElementById('sim-input').value = 'ab';
+    logEntry('ε-NFA: (a|ab)*b — rich example with epsilon transitions + multiple edges!', 'step');
+    logEntry('ε-transitions shown as dashed amber arrows. Try: b, ab, aab, abb, aabb', 'step');
+    logEntry('Epsilon closure is auto-computed during simulation.', '');
+  }
+
+  updateUI(); render();
+}
+
+// ============================================================
+//  KICK OFF
+// ============================================================
+setMode('DFA');
+</script>
+</body>
+</html>
